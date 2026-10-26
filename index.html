@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>宿命</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;500&family=Noto+Serif+JP:wght@200;300&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body, html {
+            width: 100%; height: 100%; overflow: hidden;
+            background-color: #0d0a0e; 
+            font-family: 'Noto Serif SC', "Songti SC", "STSong", serif;
+            font-weight: 300; 
+        }
+
+        /* ================= 页面切换控制 ================= */
+        .page {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            background-color: #fcfcfc;
+        }
+        .page.hidden { opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(10px); }
+
+        /* ================= 第一页：封面层 ================= */
+        #page1 { z-index: 10; cursor: pointer; }
+        
+        .bg-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('bg.jpg'); /* ⚠️ 第一页背景 */
+            background-size: cover; background-position: center;
+            filter: brightness(0.55) contrast(1.15) saturate(0.85); 
+            z-index: 1;
+        }
+        .noise-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2; pointer-events: none; opacity: 0.15;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 40%, rgba(0,0,0,0) 20%, rgba(10, 5, 15, 0.9) 100%);
+            z-index: 3; pointer-events: none;
+        }
+
+        .click-hint {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #f0dbe6; font-size: 0.8rem; letter-spacing: 0.2em; text-indent: 0.2em;
+            white-space: nowrap; z-index: 10; opacity: 0.6;
+            animation: breathe 2s infinite alternate; pointer-events: none;
+            text-shadow: 0 0 8px rgba(230, 100, 130, 0.4);
+        }
+        @keyframes breathe { 0% { opacity: 0.2; } 100% { opacity: 0.8; } }
+
+        .text-glow-style {
+            color: #f0dbe6; 
+            text-shadow: 0 0 8px rgba(230, 100, 130, 0.4), 1px 1px 3px rgba(0, 0, 0, 0.9);
+        }
+
+        .top-left-text {
+            position: absolute; top: 30px; left: 30px; z-index: 6;
+            font-family: 'Noto Serif JP', serif; font-size: 0.75rem;
+            letter-spacing: 0.4em; writing-mode: vertical-rl; text-orientation: upright;
+            line-height: 1.8; opacity: 0; transition: opacity 0.3s ease-out;
+        }
+        .top-left-text.show { opacity: 1; }
+        .deco { font-size: 0.8rem; opacity: 0.7; letter-spacing: 0; }
+
+        .bottom-right-text {
+            position: absolute; bottom: 30px; right: 30px; z-index: 6;
+            font-family: 'Noto Serif JP', serif; font-size: 0.8rem;
+            letter-spacing: 0.3em; writing-mode: vertical-rl; text-orientation: upright;
+            line-height: 1.8; opacity: 0; transition: opacity 0.3s ease-out;
+        }
+        .bottom-right-text.show { opacity: 1; }
+
+        .center-art-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 5; width: 100%; max-width: 800px; height: 400px;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .red-thread-svg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 4; pointer-events: none; filter: drop-shadow(0 0 4px rgba(224, 42, 59, 0.6)); 
+        }
+        .thread-path {
+            fill: none; stroke: #e02a3b; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+            stroke-dasharray: 3000; stroke-dashoffset: 3000;
+            animation: drawThread 20s linear forwards; animation-play-state: paused; 
+        }
+        @keyframes drawThread { 0% { stroke-dashoffset: 3000; } 100% { stroke-dashoffset: 0; } }
+
+        .text-container {
+            position: relative; z-index: 5; width: 100%; text-align: center;
+            display: flex; flex-direction: column; gap: 20px; pointer-events: none;
+        }
+        .line { font-size: 1.6rem; letter-spacing: 0.4em; text-indent: 0.4em; min-height: 1.6rem; }
+        .line:nth-child(2) { margin-left: 4em; font-size: 1.3rem; }
+        .line:nth-child(3) { margin-right: 4em; }
+
+        .next-hint {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            color: #d4b0c3; font-size: 0.7rem; letter-spacing: 0.3em;
+            opacity: 0; pointer-events: none; transition: opacity 1s ease;
+        }
+        .next-hint.show { opacity: 0.6; animation: breathe 2s infinite alternate; }
+
+
+        /* ================= 第二页：聊天界面 ================= */
+        #page2 {
+            z-index: 20;
+            display: flex; flex-direction: column;
+        }
+
+        .profile-header-section {
+            position: relative;
+            height: 22%; 
+            width: 100%;
+            flex-shrink: 0;
+        }
+
+        .header-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('top_bg.jpg'); /* ⚠️ 第二页顶部背景 */
+            background-color: #8a8a8a; 
+            background-size: cover; background-position: center;
+            filter: brightness(0.85);
+        }
+        
+        .header-bg::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 30%;
+            background: linear-gradient(to top, rgba(0,0,0,0.1), transparent);
+        }
+
+        .white-card {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 65%;
+            background: #ffffff;
+            border-radius: 16px 16px 0 0;
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 30px; 
+            z-index: 2;
+        }
+
+        .top-icons {
+            position: absolute; top: 10px; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 15px;
+            color: #000; font-size: 1rem;
+        }
+        
+        .icon-back {
+            cursor: pointer; padding: 5px 15px; margin-left: -10px; font-weight: bold;
+        }
+
+        .header-avatars {
+            position: absolute; top: -25px;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10;
+        }
+        .header-avatars .h-avatar {
+            width: 50px; height: 50px; border-radius: 50%;
+            background-size: cover; background-position: center;
+            border: 2px solid #fff;
+            background-image: url('avatar1.jpg');
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header-avatars .h-avatar:nth-child(1) { z-index: 2; transform: translateX(8px); }
+        .header-avatars .h-avatar:nth-child(2) { z-index: 1; background-image: url('avatar2.jpg'); transform: translateX(-8px); }
+
+        .card-content { text-align: center; width: 100%; padding: 0 10px; }
+        
+        .card-name {
+            font-size: 1.05rem; color: #000; margin-bottom: 4px;
+            font-family: 'Noto Serif SC', "STSong", serif; font-weight: 500; 
+            letter-spacing: 4px; text-indent: 4px;
+        }
+        
+        .card-desc {
+            font-size: 0.65rem; color: #000; margin-bottom: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            letter-spacing: 0.5px; opacity: 0.6; 
+        }
+        
+        .tags-row { display: flex; justify-content: center; gap: 6px; }
+        .tag {
+            background-color: #fce8ef; color: #000;
+            padding: 3px 10px; border-radius: 12px;
+            font-size: 0.6rem; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        .chat-container {
+            flex: 1; overflow-y: auto; padding: 10px 15px 60px 15px;
+            display: flex; flex-direction: column; gap: 15px;
+            scroll-behavior: smooth; background-color: #fcfcfc;
+        }
+        .chat-container::-webkit-scrollbar { display: none; }
+
+        .message {
+            display: flex; align-items: flex-start; gap: 8px;
+            width: 100%; animation: fadeIn 0.5s ease-out forwards;
+            opacity: 0; transform: translateY(10px);
+        }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+        .msg-left { align-self: flex-start; max-width: 90%; width: 100%;}
+        .msg-right { align-self: flex-end; flex-direction: row-reverse; max-width: 85%; }
+
+        .msg-avatar {
+            width: 26px; height: 26px; 
+            background-color: #e5e5e5; background-size: cover; flex-shrink: 0;
+            border-radius: 50%; clip-path: circle(50% at 50% 50%);
+        }
+        .msg-left .msg-avatar { background-image: url('avatar1.jpg'); }
+        .msg-right .msg-avatar { background-image: url('avatar2.jpg'); }
+
+        .left-header { display: flex; flex-direction: column; margin-bottom: 6px; }
+        .profile-name {
+            font-size: 0.75rem; color: #000; font-weight: 500; margin-bottom: 2px; letter-spacing: 1px;
+        }
+        .profile-desc {
+            font-size: 0.55rem; color: #666; letter-spacing: 0.05em; line-height: 1.4; margin-bottom: 4px;
+        }
+        .profile-desc span { display: block; }
+        
+        .msg-content-wrap { display: flex; align-items: flex-end; gap: 5px; width: 100%; }
+        .msg-right .msg-content-wrap { flex-direction: row-reverse; }
+
+        .bubble {
+            padding: 6px 10px; font-size: 0.8rem; line-height: 1.5;
+            position: relative; word-break: break-word; color: #000; 
+            border: 1px solid #ccc; border-radius: 2px; background: #fff; max-width: 85%;
+        }
+        .msg-right .bubble { background: #fff5f8; border-color: #e5c2d0; }
+
+        .bubble::before {
+            content: ''; position: absolute; top: 50%; width: 5px; height: 5px;
+            transform: translateY(-50%) rotate(45deg); z-index: -1;
+        }
+        .msg-left .bubble::before {
+            left: -3px; background: #fff; border-bottom: 1px solid #ccc; border-left: 1px solid #ccc;
+        }
+        .msg-right .bubble::before {
+            right: -3px; background: #fff5f8; border-top: 1px solid #e5c2d0; border-right: 1px solid #e5c2d0;
+        }
+
+        .timestamp {
+            font-size: 0.55rem; color: #b0b0b0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            white-space: nowrap; margin-bottom: 2px;
+        }
+
+        .input-area {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            padding: 8px 12px; background: #fcfcfc;
+            display: flex; gap: 6px; align-items: center; z-index: 10;
+        }
+
+        .input-box {
+            flex: 1; background: #fff; border: 1px solid #ccc;
+            padding: 8px 10px; font-size: 0.8rem; outline: none; color: #000;
+            border-radius: 2px; font-family: 'Noto Serif SC', serif;
+        }
+        .input-box:focus { border-color: #999; }
+
+        .send-btn {
+            background: #fff; color: #000; border: 1px solid #ccc;
+            padding: 8px 12px; font-size: 0.8rem; cursor: pointer;
+            border-radius: 2px; font-family: 'Noto Serif SC', serif;
+            transition: all 0.2s;
+        }
+
+
+        /* ================= 第三页：粉白高级朋友圈 ================= */
+        #page3 {
+            z-index: 30;
+            background-color: #fdfbfc; 
+            display: flex; flex-direction: column;
+            overflow-y: auto;
+        }
+        #page3::-webkit-scrollbar { display: none; }
+
+        .moments-bg {
+            width: 100%; height: 180px; 
+            background-image: url('moments_bg.jpg'); /* ⚠️ 第三页顶部背景 */
+            background-color: #222; 
+            background-size: cover; background-position: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .moments-back-btn {
+            position: absolute; top: 15px; left: 15px;
+            width: 28px; height: 28px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            color: #fff; font-size: 0.9rem;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .moments-card {
+            width: 100%;
+            margin-top: -20px; 
+            background: #ffffff; 
+            border-radius: 20px 20px 0 0; 
+            padding: 0 15px 20px 15px;
+            position: relative;
+            flex: 1;
+            box-shadow: 0 -4px 20px rgba(230, 180, 200, 0.1); 
+        }
+
+        .moments-avatar-box {
+            width: 68px; height: 68px;
+            border-radius: 50%;
+            background-color: #ffffff; 
+            padding: 3px;
+            box-shadow: 0 4px 12px rgba(230, 180, 200, 0.2);
+            margin-top: -34px; 
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 5;
+        }
+        .moments-avatar-img {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background-image: url('avatar1.jpg'); 
+            background-size: cover; background-position: center;
+        }
+
+        .moments-name {
+            font-size: 1rem; font-weight: 500; color: #333; margin-bottom: 2px;
+        }
+        
+        .moments-id {
+            font-size: 0.75rem; color: #d19fb1; margin-bottom: 10px; 
+        }
+
+        .moments-bio {
+            font-size: 0.8rem; color: #666; line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .moments-tabs {
+            display: flex; justify-content: flex-start;
+            padding-top: 12px;
+            border-top: 1px solid #f2e6ea; 
+        }
+        .moments-tab {
+            font-size: 0.85rem; font-weight: 500; color: #333;
+            padding-bottom: 3px;
+            border-bottom: 2px solid #e5a8bc; 
+        }
+
+        .moments-feed {
+            padding: 15px 0;
+        }
+        
+        .feed-item { display: flex; gap: 12px; margin-bottom: 20px; }
+        
+        .feed-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background-image: url('avatar1.jpg');
+            background-size: cover; background-position: center;
+            flex-shrink: 0;
+        }
+
+        .feed-content { flex: 1; }
+
+        .feed-header {
+            font-size: 0.8rem; font-weight: 500; color: #a88091; margin-bottom: 6px;
+            display: flex; justify-content: space-between;
+        }
+        .feed-time {
+            font-size: 0.7rem; color: #c9c9c9; font-weight: normal;
+        }
+
+        /* 灰色提示字 */
+        .hint-text {
+            font-size: 0.65rem;
+            color: #c0c0c0;
+            margin-bottom: 6px;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            letter-spacing: 0.5px;
+            transition: opacity 0.3s ease;
+        }
+        .hint-text.hide {
+            opacity: 0;
+        }
+
+        /* 粉色主气泡 */
+        .feed-text {
+            font-size: 0.8rem; 
+            color: #553a45; 
+            line-height: 1.6;
+            margin-bottom: 12px; 
+            padding: 12px 15px;
+            background: #fdf5f7; 
+            border: 1px solid #f7e6eb; 
+            border-radius: 8px; 
+            font-family: 'Noto Serif SC', serif;
+            letter-spacing: 0.5px;
+            cursor: pointer; 
+            transition: background 0.2s;
+            display: block; /* 为了支持 a 标签 */
+            text-decoration: none; /* 去掉下划线 */
+        }
+        .feed-text:active { background: #fae8ee; }
+        
+        /* 隐藏的展开内容 */
+        .expand-content {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 0;
+        }
+        
+        .expand-content.show {
+            max-height: 200px;
+            opacity: 1;
+            margin-bottom: 12px;
+        }
+
+        /* 展开的新气泡 */
+        .new-bubble {
+            font-size: 0.75rem; 
+            color: #d16a8a; 
+            line-height: 1.6;
+            padding: 10px 12px;
+            background: #ffffff; 
+            border: 1px dashed #e5a8bc; 
+            border-radius: 6px; 
+            font-family: 'Noto Serif SC', serif;
+        }
+        
+        .feed-footer {
+            display: flex; justify-content: flex-start; gap: 20px; color: #d19fb1;
+            font-size: 0.75rem;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- ⚠️ 这里改成了你本地的 MP3 文件 -->
+    <audio id="bgm" loop preload="auto">
+        <source src="music.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- ================= 第一页（封面） ================= -->
+    <div class="page" id="page1">
+        <div class="bg-container"></div>
+        <div class="noise-overlay"></div>
+        <div class="vignette"></div>
+        
+        <div class="click-hint" id="clickHint">点击屏幕 聆听宿命</div>
+
+        <div class="top-left-text text-glow-style" id="topText"></div>
+        <div class="bottom-right-text text-glow-style" id="bottomText"></div>
+
+        <div class="center-art-container">
+            <svg class="red-thread-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet">
+                <path class="thread-path" id="linePath" d="M -50 250 C 150 250, 200 150, 300 150 C 350 150, 350 50, 300 80 C 250 110, 280 200, 400 220 C 520 240, 550 180, 650 180 C 750 180, 800 250, 850 250" />
+            </svg>
+
+            <div class="text-container">
+                <div class="line text-glow-style" id="line1"></div>
+                <div class="line text-glow-style" id="line2"></div>
+                <div class="line text-glow-style" id="line3"></div>
+            </div>
+        </div>
+        
+        <div class="next-hint" id="nextHint">轻触进入下一页</div>
+    </div>
+
+    <!-- ================= 第二页（聊天） ================= -->
+    <div class="page hidden" id="page2">
+        
+        <div class="profile-header-section">
+            <div class="header-bg"></div>
+            
+            <div class="white-card">
+                <div class="top-icons">
+                    <span class="icon-back" id="goToPage3">&lt;</span>
+                    <span>♡ ⋯</span>
+                </div>
+
+                <div class="header-avatars">
+                    <div class="h-avatar"></div>
+                    <div class="h-avatar"></div>
+                </div>
+
+                <div class="card-content">
+                    <div class="card-name">爱越过红线</div>
+                    <div class="card-desc">那就一直说明天见 直到真的明天见</div>
+                    <div class="tags-row">
+                        <div class="tag">Treasure</div>
+                        <div class="tag">Angel</div>
+                        <div class="tag">Darling</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-container" id="chatContainer"></div>
+
+        <div class="input-area">
+            <input type="text" class="input-box" id="msgInput" placeholder="输入消息..." autocomplete="off">
+            <button class="send-btn" id="sendBtn">发送</button>
+        </div>
+
+    </div>
+
+    <!-- ================= 第三页（朋友圈） ================= -->
+    <div class="page hidden" id="page3">
+        
+        <div class="moments-bg">
+            <div class="moments-back-btn" id="backToPage2">&lt;</div>
+        </div>
+
+        <div class="moments-card">
+            
+            <div class="moments-avatar-box">
+                <div class="moments-avatar-img"></div>
+            </div>
+            
+            <div class="moments-name">祝缘</div>
+            <div class="moments-id">Treasure</div>
+            <div class="moments-bio">若爱是灵魂相认 那天高地阔 我只需要被你看见</div>
+            
+            <div class="moments-tabs">
+                <div class="moments-tab">朋友圈</div>
+            </div>
+
+            <div class="moments-feed">
+                <!-- 第一条朋友圈 -->
+                <div class="feed-item">
+                    <div class="feed-avatar"></div>
+                    <div class="feed-content">
+                        <div class="feed-header">
+                            <span>祝缘</span>
+                            <span class="feed-time">5.20</span>
+                        </div>
+                        
+                        <div class="hint-text" id="hintText">* 点击文案可查看介绍</div>
+
+                        <div class="feed-text" id="mainBubble">
+                            &gt; &lt;<br><br>
+                            A only oneꔷ × ꔷ
+                        </div>
+
+                        <div class="expand-content" id="expandContent">
+                            <div class="new-bubble">
+                                @细腻体贴引导型年下top1 <br><br>
+                                祝缘 18Le-T ISFJ#重度姐姐控
+                            </div>
+                        </div>
+
+                        <div class="feed-footer">
+                            <span>♡ 0</span>
+                            <span>💬 评论</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第二条朋友圈 -->
+                <div class="feed-item">
+                    <div class="feed-avatar"></div>
+                    <div class="feed-content">
+                        <div class="feed-header">
+                            <span>祝缘</span>
+                            <span class="feed-time">5.21</span>
+                        </div>
+                        
+                        <div class="hint-text" id="hintText2">* 点击文案可查看介绍</div>
+
+                        <div class="feed-text" id="mainBubble2">
+                            &gt; &lt;<br><br>
+                            散步吗 听起来像短暂的私奔
+                        </div>
+
+                        <div class="expand-content" id="expandContent2">
+                            <div class="new-bubble">
+                                暧昧温情 钓系甜宠 精神引导 伪下犯上 微擦调情
+                            </div>
+                        </div>
+
+                        <div class="feed-footer">
+                            <span>♡ 0</span>
+                            <span>💬 评论</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第三条朋友圈 -->
+                <div class="feed-item">
+                    <div class="feed-avatar"></div>
+                    <div class="feed-content">
+                        <div class="feed-header">
+                            <span>祝缘</span>
+                            <span class="feed-time">5.22</span>
+                        </div>
+                        
+                        <div class="hint-text" id="hintText3">* 点击文案可查看介绍</div>
+
+                        <div class="feed-text" id="mainBubble3">
+                            &gt; &lt;<br><br>
+                            你轻轻的靠了我的肩 此刻我拥有了全世界
+                        </div>
+
+                        <div class="expand-content" id="expandContent3">
+                            <div class="new-bubble">
+                                腹黑绿茶 撒娇卖萌 流氓直球 偶尔恶俗 偶尔纯情 <br>
+                                装疯卖傻占便宜 上下位/白话微文随机
+                            </div>
+                        </div>
+
+                        <div class="feed-footer">
+                            <span>♡ 0</span>
+                            <span>💬 评论</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第四条朋友圈（直接点击跳转） -->
+                <div class="feed-item">
+                    <div class="feed-avatar"></div>
+                    <div class="feed-content">
+                        <div class="feed-header">
+                            <span>祝缘</span>
+                            <span class="feed-time">5.23</span>
+                        </div>
+                        
+                        <div class="hint-text">* 话术</div>
+
+                        <a class="feed-text" href="https://www.kdocs.cn/l/cctcU7EN3XUs" target="_blank">
+                            &gt; &lt;<br><br>
+                            你说你的世界太孤独了 所以萌萌的我出现啦
+                        </a>
+
+                        <div class="feed-footer">
+                            <span>♡ 0</span>
+                            <span>💬 评论</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 第五条朋友圈（直接点击跳转） -->
+                <div class="feed-item">
+                    <div class="feed-avatar"></div>
+                    <div class="feed-content">
+                        <div class="feed-header">
+                            <span>祝缘</span>
+                            <span class="feed-time">5.24</span>
+                        </div>
+                        
+                        <div class="hint-text">* 须知</div>
+
+                        <a class="feed-text" href="https://www.kdocs.cn/l/cpOMmjMfCRlc" target="_blank">
+                            &gt; &lt;<br><br>
+                            幸福开始有预兆
+                        </a>
+
+                        <div class="feed-footer">
+                            <span>♡ 0</span>
+                            <span>💬 评论</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        // ================= 页面元素获取 =================
+        const audio = document.getElementById('bgm');
+        const page1 = document.getElementById('page1');
+        const page2 = document.getElementById('page2');
+        const page3 = document.getElementById('page3');
+        
+        const threadPath = document.getElementById('linePath');
+        const clickHint = document.getElementById('clickHint');
+        const nextHint = document.getElementById('nextHint');
+
+        const goToPage3Btn = document.getElementById('goToPage3');
+        const backToPage2Btn = document.getElementById('backToPage2');
+        
+        // ================= 气泡展开逻辑（前三条） =================
+        // 第一条
+        const mainBubble = document.getElementById('mainBubble');
+        const expandContent = document.getElementById('expandContent');
+        const hintText = document.getElementById('hintText');
+
+        mainBubble.addEventListener('click', () => {
+            expandContent.classList.toggle('show');
+            if (expandContent.classList.contains('show')) {
+                hintText.classList.add('hide');
+            } else {
+                hintText.classList.remove('hide');
+            }
+        });
+
+        // 第二条
+        const mainBubble2 = document.getElementById('mainBubble2');
+        const expandContent2 = document.getElementById('expandContent2');
+        const hintText2 = document.getElementById('hintText2');
+
+        mainBubble2.addEventListener('click', () => {
+            expandContent2.classList.toggle('show');
+            if (expandContent2.classList.contains('show')) {
+                hintText2.classList.add('hide');
+            } else {
+                hintText2.classList.remove('hide');
+            }
+        });
+
+        // 第三条
+        const mainBubble3 = document.getElementById('mainBubble3');
+        const expandContent3 = document.getElementById('expandContent3');
+        const hintText3 = document.getElementById('hintText3');
+
+        mainBubble3.addEventListener('click', () => {
+            expandContent3.classList.toggle('show');
+            if (expandContent3.classList.contains('show')) {
+                hintText3.classList.add('hide');
+            } else {
+                hintText3.classList.remove('hide');
+            }
+        });
+
+
+        // ================= 第一页逻辑 =================
+        const textTop = "あなたと東京の桜の街を散歩します⁎";
+        const textBottom = "天使が恋に落ちる瞬間 ˖";
+        const text1 = "他们说";
+        const text2 = "两个人命运彼此纠缠";
+        const text3 = "叫做宿命";
+        const TYPE_SPEED = 80; 
+
+        function typeText(elementId, text, startDelay) {
+            setTimeout(() => {
+                const el = document.getElementById(elementId);
+                el.classList.add('show'); 
+                let i = 0;
+                function typeChar() {
+                    if (i < text.length) {
+                        el.innerHTML += text.charAt(i);
+                        i++;
+                        setTimeout(typeChar, TYPE_SPEED);
+                    }
+                }
+                typeChar();
+            }, startDelay);
+        }
+
+        let isSwitched = false;
+        function goToPage2() {
+            if (isSwitched) return;
+            isSwitched = true;
+            
+            page1.classList.add('hidden');
+            page2.classList.remove('hidden');
+            
+            if (audio.paused) {
+                audio.volume = 0.5; 
+                audio.play().catch((error) => console.log("音频播放失败:", error));
+            }
+            
+            triggerChatSequence();
+        }
+
+        function startExperience() {
+            if(clickHint) clickHint.style.display = 'none';
+            audio.volume = 0.5; 
+            audio.play().catch((error) => console.log("音频播放失败:", error));
+            threadPath.style.animationPlayState = 'running';
+
+            typeText('topText', textTop, 500);
+            typeText('line1', text1, 2000);      
+            typeText('line2', text2, 2800);      
+            typeText('line3', text3, 3600);      
+            typeText('bottomText', textBottom, 6000);
+
+            setTimeout(() => {
+                if(!isSwitched) nextHint.classList.add('show');
+            }, 7000);
+
+            setTimeout(() => {
+                goToPage2();
+            }, 8500);
+        }
+
+        page1.addEventListener('click', function trigger() {
+            startExperience();
+            page1.addEventListener('click', goToPage2);
+        }, { once: true });
+
+
+        // ================= 第二页和第三页切换 =================
+        goToPage3Btn.addEventListener('click', () => {
+            page2.classList.add('hidden');
+            page3.classList.remove('hidden');
+        });
+
+        backToPage2Btn.addEventListener('click', () => {
+            page3.classList.add('hidden');
+            page2.classList.remove('hidden');
+        });
+
+
+        // ================= 第二页聊天逻辑 =================
+        const chatContainer = document.getElementById('chatContainer');
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        const initMsgs = [
+            "如果你正在读这段话就说明你爱上我了，",
+            "如果你想否认，那为什么还在读。"
+        ];
+
+        const autoReply = [
+            "以妻子需求为第一位",
+            "“说句想我，我就投降”。",
+            "—骗你的，法起你来根本不会心慈手软。"
+        ];
+
+        let chatStarted = false;
+
+        function triggerChatSequence() {
+            if(chatStarted) return;
+            chatStarted = true;
+            setTimeout(() => addMessage('left', initMsgs[0]), 1000);
+            setTimeout(() => addMessage('left', initMsgs[1]), 3500);
+        }
+
+        function getCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        function addMessage(side, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message msg-${side}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'msg-avatar';
+            
+            const contentContainer = document.createElement('div');
+            contentContainer.style.flex = "1";
+
+            if (side === 'left') {
+                const header = document.createElement('div');
+                header.className = 'left-header';
+                header.innerHTML = `
+                    <div class="profile-name">祝缘</div>
+                    <div class="profile-desc">
+                        <span>사랑은 바보같은 사람과야</span>
+                        <span>爱是一颗笨苹果</span>
+                    </div>
+                `;
+                contentContainer.appendChild(header);
+            } else {
+                contentContainer.style.marginTop = "8px";
+            }
+
+            const msgWrap = document.createElement('div');
+            msgWrap.className = 'msg-content-wrap';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerText = text;
+
+            const time = document.createElement('div');
+            time.className = 'timestamp';
+            time.innerText = getCurrentTime();
+
+            msgWrap.appendChild(bubble);
+            msgWrap.appendChild(time);
+            
+            contentContainer.appendChild(msgWrap);
+
+            msgDiv.appendChild(avatar);
+            msgDiv.appendChild(contentContainer);
+            
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
+        function sendMessage() {
+            const text = msgInput.value.trim();
+            if (!text) return;
+
+            addMessage('right', text);
+            msgInput.value = '';
+
+            setTimeout(() => {
+                let i = 0;
+                function sendNext() {
+                    if (i < autoReply.length) {
+                        addMessage('left', autoReply[i]);
+                        i++;
+                        setTimeout(sendNext, 1200);
+                    }
+                }
+                sendNext();
+            }, 1000);
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        msgInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+    </script>
+</body>
+</html>
